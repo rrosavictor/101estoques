@@ -1,0 +1,477 @@
+openapi: 3.0.3
+info:
+  title: API Plataforma 101 Estoques
+  version: 1.0.0
+  description: API para gerenciamento de estoques e aluguéis
+servers:
+  - url: http://localhost:3000
+    description: BFF
+  - url: http://localhost:3001
+    description: Microserviço Estoques
+  - url: http://localhost:3002
+    description: Microserviço Aluguéis
+tags:
+  - name: BFF
+    description: Endpoints do Backend-for-Frontend
+  - name: Estoques
+    description: Operações de estoques
+  - name: Aluguéis
+    description: Operações de aluguéis
+components:
+  schemas:
+    Estoque:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "64b8f9c2f1a4e3b5c6d7e8f9"
+        codigo:
+          type: string
+          example: "EST-001"
+        nome:
+          type: string
+          example: "Box 10m² - Zona Sul"
+        tamanho_m2:
+          type: number
+          example: 10
+        preco_mensal:
+          type: number
+          format: float
+          example: 500.00
+        localizacao:
+          type: string
+          example: "Rua X, 123"
+        status:
+          type: string
+          enum:
+            - disponivel
+            - ocupado
+            - manutencao
+          default: disponivel
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - codigo
+        - nome
+        - tamanho_m2
+        - preco_mensal
+        - localizacao
+    EstoqueInput:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "EST-002"
+        nome:
+          type: string
+          example: "Box 5m² - Centro"
+        tamanho_m2:
+          type: number
+          example: 5
+        preco_mensal:
+          type: number
+          format: float
+          example: 300.00
+        localizacao:
+          type: string
+          example: "Av. Y, 456"
+        status:
+          type: string
+          enum:
+            - disponivel
+            - ocupado
+            - manutencao
+      required:
+        - codigo
+        - nome
+        - tamanho_m2
+        - preco_mensal
+        - localizacao
+    Aluguel:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        estoque_id:
+          type: string
+          description: Referência ao _id do Estoque (MongoDB)
+          example: "64b8f9c2f1a4e3b5c6d7e8f9"
+        cliente_nome:
+          type: string
+          example: "João Silva"
+        cliente_email:
+          type: string
+          format: email
+          example: "joao@example.com"
+        data_inicio:
+          type: string
+          format: date
+          example: "2025-10-01"
+        data_fim:
+          type: string
+          format: date
+          nullable: true
+          example: null
+        valor_mensal:
+          type: number
+          format: float
+          example: 500.00
+        status:
+          type: string
+          enum:
+            - ativo
+            - finalizado
+            - cancelado
+          default: ativo
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - estoque_id
+        - cliente_nome
+        - cliente_email
+        - data_inicio
+        - valor_mensal
+    AluguelInput:
+      type: object
+      properties:
+        estoque_id:
+          type: string
+          example: "64b8f9c2f1a4e3b5c6d7e8f9"
+        cliente_nome:
+          type: string
+          example: "Maria Souza"
+        cliente_email:
+          type: string
+          format: email
+          example: "maria@example.com"
+        data_inicio:
+          type: string
+          format: date
+          example: "2025-10-10"
+        data_fim:
+          type: string
+          format: date
+          nullable: true
+          example: null
+        valor_mensal:
+          type: number
+          format: float
+          example: 450.00
+        status:
+          type: string
+          enum:
+            - ativo
+            - finalizado
+            - cancelado
+      required:
+        - estoque_id
+        - cliente_nome
+        - cliente_email
+        - data_inicio
+        - valor_mensal
+  responses:
+    BadRequest:
+      description: Requisição inválida. Verifique os dados enviados.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Dados inválidos: campo 'codigo' é obrigatório."
+    NotFound:
+      description: Recurso não encontrado.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Estoque não encontrado"
+    Generic200:
+      description: Operação bem-sucedida.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    Created:
+      description: Recurso criado com sucesso.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+paths:
+  /api/dashboard:
+    get:
+      tags:
+        - BFF
+      summary: Buscar dados agregados do dashboard
+      description: Retorna estoques disponíveis e aluguéis ativos
+      responses:
+        '200':
+          description: Dados agregados do dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estoques_disponiveis:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Estoque'
+                  alugueis_ativos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Aluguel'
+                  total_estoques:
+                    type: integer
+                    example: 42
+                  total_alugueis:
+                    type: integer
+                    example: 10
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/estoque/{id}/detalhes:
+    get:
+      tags:
+        - BFF
+      summary: Buscar detalhes completos de um estoque
+      description: Retorna estoque + aluguéis relacionados
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes do estoque com alugueis relacionados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  estoque:
+                    $ref: '#/components/schemas/Estoque'
+                  alugueis:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Aluguel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /estoques:
+    get:
+      tags:
+        - Estoques
+      summary: Listar todos
+      responses:
+        '200':
+          description: Lista de estoques
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estoque'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags:
+        - Estoques
+      summary: Criar novo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstoqueInput'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /estoques/{id}:
+    get:
+      tags:
+        - Estoques
+      summary: Buscar por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Estoque encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estoque'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Estoques
+      summary: Atualizar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstoqueInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/Generic200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Estoques
+      summary: Deletar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Estoque deletado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Estoque deletado"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /alugueis:
+    get:
+      tags:
+        - Aluguéis
+      summary: Listar todos
+      description: Listar aluguéis. Filtrar por status usando query param `status`.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ativo
+              - finalizado
+              - cancelado
+      responses:
+        '200':
+          description: Lista de aluguéis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Aluguel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags:
+        - Aluguéis
+      summary: Criar novo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AluguelInput'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /alugueis/{id}:
+    get:
+      tags:
+        - Aluguéis
+      summary: Buscar por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Aluguel encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Aluguel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Aluguéis
+      summary: Atualizar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AluguelInput'
+      responses:
+        '200':
+          $ref: '#/components/responses/Generic200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Aluguéis
+      summary: Cancelar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Aluguel cancelado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Aluguel cancelado"
+        '404':
+          $ref: '#/components/responses/NotFound'
