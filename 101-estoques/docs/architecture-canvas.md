@@ -118,16 +118,3 @@
 - Logs centralizados
 - Monitoramento de eventos
 
-## 8. Decisões Pendentes
-
-### Próximos Passos
-- Implementar autenticação/autorização
-- Melhorar tratamento de erros
-- Adicionar monitoramento
-- Implementar testes E2E
-
-### Pontos de Atenção
-- Segurança entre serviços
-- Backup e recuperação
-- Estratégia de deploy
-- Gestão de configuração
