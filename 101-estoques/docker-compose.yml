@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  microservice-estoques:
+    build:
+      context: ./microservice-estoques
+      dockerfile: Dockerfile
+    container_name: microservice-estoques
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const net=require('net'); const s=new net.Socket(); s.setTimeout(1000); s.on('error',()=>process.exit(1)); s.on('timeout',()=>process.exit(1)); s.connect(3001,'127.0.0.1',()=>process.exit(0));\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  microservice-alugueis:
+    build:
+      context: ./microservice-alugueis
+      dockerfile: Dockerfile
+    container_name: microservice-alugueis
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const net=require('net'); const s=new net.Socket(); s.setTimeout(1000); s.on('error',()=>process.exit(1)); s.on('timeout',()=>process.exit(1)); s.connect(3002,'127.0.0.1',()=>process.exit(0));\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  bff-node:
+    build:
+      context: ./bff-node
+      dockerfile: Dockerfile
+    container_name: bff-node
+    ports:
+      - "3000:3000"
+    environment:
+      - SERVICE_ESTOQUES_URL=http://microservice-estoques:3001
+      - SERVICE_ALUGUEIS_URL=http://microservice-alugueis:3002
+      - NODE_ENV=production
+    depends_on:
+      - microservice-estoques
+      - microservice-alugueis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const net=require('net'); const s=new net.Socket(); s.setTimeout(1000); s.on('error',()=>process.exit(1)); s.on('timeout',()=>process.exit(1)); s.connect(3000,'127.0.0.1',()=>process.exit(0));\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+# opcional: rede dedicada (mas o compose cria uma padrão automaticamente)
+# networks:
+#   default:
+#     name: meu-projeto-net
